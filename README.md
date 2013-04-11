@@ -2,6 +2,52 @@ NOSIX_Simulator
 ===============
 This repository keeps track of NOSIX simulator development
 
+Compilation & execution instruction:
+------------------------------------
+1) Compilation steps:
+   (a) Download all the files in this folder
+
+   (b) You need g++ to compile the files
+
+   (c) Execute gmake clean
+
+   (d) Execute gmake
+
+   (e) Confirm "simulator" executable is created
+
+
+2) Execution of simulation:
+   (a) You can fine tune the component parameters &
+		      Set the simulation time: MAXSTEPS in NOSIXSimulationVer2.cpp
+   (b) Recompile the file if you have done any custom changes
+
+   (c) Execute ./simulator >> output.txt
+
+    3) Observe the result:
+
+   (a) more output.txt to view the result
+
+3) Tested platform
+     Solaris 10 Ultra Sparc
+
+4) Bugs
+    
+    1) event_queue.cpp: (state:Open)
+
+    -> Line120 
+               prevNode == head 
+
+	       change to: currentNode == head
+
+
+   2) Controller statistics: (state:Open)
+
+      If a small flow is evicted, only control channel rate is adjusted. The number of flows processed/bytes processed count will not reflect small flow count. We should send 1 packet_in (for large flow), 1 process_flow (for evicted small flow).
+
+   3) flowgenerator/switch forwarding rate limitation: (state: open)
+
+     Both flow generator and switch forwarding rate must be same. The max rate is 1Gbps. The flow gen and switch doesnt support more than 1Gbps. This need fix in both the components.
+
 Following briefs the design of the program:
 -------------------------------------------
 Important data structures:
