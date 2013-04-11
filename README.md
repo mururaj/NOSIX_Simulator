@@ -5,6 +5,7 @@ This repository keeps track of NOSIX simulator development
 Compilation & execution instruction:
 ------------------------------------
 1) Compilation steps:
+
    (a) Download all the files in this folder
 
    (b) You need g++ to compile the files
@@ -17,17 +18,20 @@ Compilation & execution instruction:
 
 
 2) Execution of simulation:
+
    (a) You can fine tune the component parameters &
 		      Set the simulation time: MAXSTEPS in NOSIXSimulationVer2.cpp
    (b) Recompile the file if you have done any custom changes
 
    (c) Execute ./simulator >> output.txt
 
-    3) Observe the result:
+   3) Observe the result:
 
    (a) more output.txt to view the result
 
+
 3) Tested platform
+
      Solaris 10 Ultra Sparc
 
 4) Bugs
