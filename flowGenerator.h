@@ -60,34 +60,6 @@ class flowGenerator
 {
 	public:
 		
-		/*flowGenerator(FlowGenProps myProps,Queue *flowArrQueue,
-		            unsigned int switchFwdRate) : flowArrivalQueue(flowArrQueue),
-			 switchForwardingRate(switchFwdRate),
-			 numSmallFlows((unsigned int) ( (unsigned int long long) getfwdRateInBytes() * 
-							(unsigned int long long) myProps.smallFlowPercentage ) /
-			              (100 * NUM_PACKETS_SMALL_FLOW * SMALL_FLOW_PACKET_SIZE)),
-			 numMediumFlows ((unsigned int) ( (unsigned int long long) getfwdRateInBytes() * 
-								(unsigned int long long) myProps.mediumFlowPercentage ) / 
-			                  (100 * NUM_PACKETS_MEDIUM_FLOW * MEDIUM_FLOW_PACKET_SIZE)),
-			 numLargeFlows ((unsigned int) ( (unsigned int long long) getfwdRateInBytes() * 
-								(unsigned int long long) myProps.largeFlowPercentage ) / 
-			                  (100 * NUM_PACKETS_LARGE_FLOW * LARGE_FLOW_PACKET_SIZE))			
-		{
-			
-			myproperties = myProps;
-			myproperties.numSmallFlowsGenerated = 0; //explicity initialized 
-			myproperties.numMediumFlowsGenerated = 0; //explicity initialized
-			myproperties.numLargeFlowsGenerated = 0; //explicity initialized
-			numFlowsGenerated = 0; //total num of flows generated so far
-			perFlowShare = getfwdRateInBytes() 
-				    / myproperties.totalNumberOfFlows; // Calculate per flow capacity
-			for (unsigned int i=0;i<TOTALNUMFLOWS;i++)
-			{
-				flowTracker[i]= 0;
-			}		
- 
-		} */
-
 		flowGenerator(FlowGenProps myProps,Queue *flowArrQueue,
 		            unsigned int switchFwdRate) : flowArrivalQueue(flowArrQueue),
 			 switchForwardingRate(switchFwdRate)			 			
