@@ -1,13 +1,3 @@
-/*
-Author: Muruganantham Raju
-Copyright: This code is part of on going research work at USC. 
-           Please consult mraju@usc.edu, if you want to use
-		   full/portion of this implementation work.
-
-Declaration of communication FIFO Queues 
-*/
-
-
 #ifndef QUEUE_H
 #define QUEUE_H
 #include <stdio.h>

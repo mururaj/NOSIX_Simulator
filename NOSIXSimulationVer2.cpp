@@ -1,18 +1,3 @@
-
-/*
-Author: Muruganantham Raju
-Copyright: This code is part of on going research work at USC. 
-           Please consult mraju@usc.edu, if you want to use
-		   full/portion of this implementation work.
-
-Simulator main method:
--> Creates the communication queues
--> Creates flowgen, switch and controller components
--> Initializes their properties
--> Schedule initial events 
--> Invoke event scheduler and process the event till MAXSTEPS
-*/
-
 #include "system.h"
 
 #define MAXSTEPS 300
@@ -131,8 +116,6 @@ int main()
 	// Schedule next flow arrival event
 	unsigned int beginClock = 1;
 	
-	// Schedule initial set of events
-
 	Event *newflowArrivalEvent = new Event();
 	newflowArrivalEvent->eventTime = beginClock;
 	newflowArrivalEvent->eventType = flowArrivalEvent;
@@ -151,8 +134,7 @@ int main()
 
 	unsigned int simulationDuration = MAXSTEPS;
 	
-	// Simulator process the events from event scheduler and invoke
-	// the corresponding component run method
+	// Simulator runs through FlowGenerator -> Switch components
 	for (unsigned int i=1;i<=simulationDuration;i++)
 	{
 		Event *currentEvent =(Event *)eventScheduler->remove();
@@ -167,7 +149,7 @@ int main()
 				break;
 			case switchProcessingEvent:
 				printf("Processing switchingevent\n");
-				sw1.run(currentEvent->eventTime);
+				sw1.run3(currentEvent->eventTime);
 				break;
 			case controllerProcessingEvent:
 				printf("Processing controllerevent\n");

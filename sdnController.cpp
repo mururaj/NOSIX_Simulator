@@ -1,11 +1,3 @@
-/*
-Author: Muruganantham Raju
-Copyright: This code is part of on going research work at USC. 
-           Please consult mraju@usc.edu, if you want to use
-		   full/portion of this implementation work.
-
-This file Implements sdnController component methods
-*/
 #include "sdnController.h"
 #include "system.h"
 

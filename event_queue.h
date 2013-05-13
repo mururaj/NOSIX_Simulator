@@ -1,12 +1,3 @@
-/*
-Author: Muruganantham Raju
-Copyright: This code is part of on going research work at USC. 
-           Please consult mraju@usc.edu, if you want to use
-		   full/portion of this implementation work.
-
-EventQueue class to model global event scheduler
-*/
-
 #ifndef EVENTQUEUE_H
 #define EVENTQUEUE_H
 
