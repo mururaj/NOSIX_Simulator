@@ -12,8 +12,8 @@ unsigned int firstSmallFlowNum = 0;
 unsigned int lastSmallFlowNum = 0;
 
 //#define DEBUG
-#define STRAWMAN
-//#define NOSIX
+//#define STRAWMAN
+#define NOSIX
 
 #ifdef STRAWMAN
 int sdnSwitch::run3(unsigned int currentTime)
@@ -97,6 +97,7 @@ int sdnSwitch::run3(unsigned int currentTime)
 	return 1;
 }
 
+
 /*
 Func sendControllerMsgs: Examine incoming flow & prepare msgs for controller
 -> Check if the incoming flow is matching or not
@@ -105,235 +106,68 @@ Func sendControllerMsgs: Examine incoming flow & prepare msgs for controller
 -> If flow table has space, then install the flow & send packet_in
 -> If flow table has no space, then send process_packet message  
 */
+
 unsigned int sdnSwitch::sendControllerMsgs()
 {
 	
 	unsigned int  controlChanlRate = getCtrlChanlRateInBytes();
-
+	
 	Flow *waitingFlow;
 	while ((waitingFlow = (Flow *) tmpIncomingFlowQueue->remove()))
 	{
-			/* Pre declaring now. Stub to check execution without controller
-			if (!hashSet[waitingFlow->flowNumber])
+		/* Pre declaring now. Stub to check execution without controller
+		if (!hashSet[waitingFlow->flowNumber])
+		{
+			hashSet[waitingFlow->flowNumber] = 1;
+			myproperties.numFlowsInstalled++;
+
+			#ifdef DEBUG
+				printf("Number of installed flows %u\n",myproperties.numFlowsInstalled);
+			#endif
+
+		}	*/
+
+		// Check if this flow matches flow table entry
+		if (!hashSet[waitingFlow->flowNumber] || waitingFlow->flowTag == begin 
+			|| waitingFlow->flowTag == fullflow)
+		{  
+			// handle flow table missing action
+			
+			#ifdef DEBUG
+				printf("Flow %u is not matching flow table\n",waitingFlow->flowNumber);
+			#endif
+
+			// Check if flow table is full
+			if (myproperties.numFlowsInstalled < myproperties.perTableNumFlowEntries)
 			{
-				hashSet[waitingFlow->flowNumber] = 1;
-				myproperties.numFlowsInstalled++;
-
-				#ifdef DEBUG
-					printf("Number of installed flows %u\n",myproperties.numFlowsInstalled);
-				#endif
-
-			}*/		
-
-			// Check if this flow matches flow table entry
-			if (!hashSet[waitingFlow->flowNumber] || waitingFlow->flowTag == begin 
-				|| waitingFlow->flowTag == fullflow)
-			{  
-				// handle flow table missing action
-				
-				#ifdef DEBUG
-					printf("Flow %u is not matching flow table\n",waitingFlow->flowNumber);
-				#endif
-
-				// Check if flow table is full
-				if (myproperties.numFlowsInstalled < myproperties.perTableNumFlowEntries)
+				if (!installFlow(waitingFlow,&controlChanlRate))
 				{
-					
-					// Send first packet of the flow to control channel
-					// sending packet_in asynchronous message to controller
-					if (waitingFlow->flowType == large)
-					{
-						if ((controlChanlRate/LARGE_FLOW_PACKET_SIZE) < 1)
-						{
-							#ifdef DEBUG
-								printf("Dropping large flow %u\n",waitingFlow->flowNumber);
-							#endif
-							// code to drop the flow
-							numBytesDropped += (waitingFlow->numPackets * 
-												LARGE_FLOW_PACKET_SIZE);
-							delete waitingFlow;
-							waitingFlow = NULL;
-							numFlowsDropped++;
-							numLargeFlowsDropped++;
-						} else
-						{
-							#ifdef DEBUG
-								printf("FT is not full. Sending packetin for large flow %u\n",
-												waitingFlow->flowNumber);
-							#endif
-							
-							// Update control channel rate
-							controlChanlRate -=LARGE_FLOW_PACKET_SIZE;
-							
-							// Update total number of installed flow entries
-							myproperties.numFlowsInstalled++;
-							myproperties.numFlowEntriesByLarge++;
-
-							waitingFlow->flowAction = PACKET_IN;
-
-							// Add this flow to control channel
-							switchToControllerQueue->append((void *)waitingFlow);
-
-							// Also add copy of this flow to waiting flows
-							waitingFlowsQueue->append((void *)waitingFlow);
-						}
-					} else if (waitingFlow->flowType == small)
-					{
-						if ((controlChanlRate/SMALL_FLOW_PACKET_SIZE) < 1)
-						{
-							#ifdef DEBUG
-								printf("Dropping small flow %u\n",waitingFlow->flowNumber);
-							#endif
-							// code to drop the flow
-							numBytesDropped += (waitingFlow->numPackets * 
-												SMALL_FLOW_PACKET_SIZE);
-							delete waitingFlow;
-							waitingFlow = NULL;
-							numFlowsDropped++;
-							numSmallFlowsDropped++;
-						} else
-						{							
-							#ifdef DEBUG
-								printf("FT is not full. Sending packetin for small flow %u\n",
-											waitingFlow->flowNumber);
-							#endif
-
-							if (firstSmallFlowNum == 0)
-							{
-								firstSmallFlowNum = waitingFlow->flowNumber;
-							} else if (waitingFlow->flowNumber < firstSmallFlowNum)
-							{
-								firstSmallFlowNum = waitingFlow->flowNumber;
-							}
-
-							if (lastSmallFlowNum == 0)
-							{
-								lastSmallFlowNum = waitingFlow->flowNumber;
-							} else if (waitingFlow->flowNumber > lastSmallFlowNum)
-							{
-								lastSmallFlowNum = waitingFlow->flowNumber;
-							}
-							
-							// Update control channel rate
-							controlChanlRate -=SMALL_FLOW_PACKET_SIZE;
-
-							// Update total number of installed flow entries
-							myproperties.numFlowsInstalled++;
-							myproperties.numFlowEntriesBySmall++;
-
-							waitingFlow->flowAction = PACKET_IN;
-
-							// Add this flow to control channel
-							switchToControllerQueue->append((void *)waitingFlow);
-
-							// Also add copy of this flow to waiting flows
-							waitingFlowsQueue->append((void *)waitingFlow);
-						}	
-					}
-				} else
-				{
-					// handle flow table full case
-					
-					// Send all the packets of this flow to control channel
-					// sending process_packet asynchronous message to controller
-					if (waitingFlow->flowType == large)
-					{
-						// code to evict a small flow						
-					  
-					  if ((controlChanlRate/
-							(LARGE_FLOW_PACKET_SIZE * waitingFlow->numPackets)) < 1)
-						{
-							#ifdef DEBUG
-								printf("Dropping large flow %u\n",waitingFlow->flowNumber);
-							#endif
-							// code to drop the flow
-							numBytesDropped += (waitingFlow->numPackets * 
-												LARGE_FLOW_PACKET_SIZE);
-							delete waitingFlow;
-							waitingFlow = NULL;
-							numFlowsDropped++;
-							numLargeFlowsDropped++;
-						} else
-						{
-							#ifdef DEBUG
-								printf("Flow table is full. Sending packetout\n");
-							#endif
-							
-							// Update control channel rate
-							controlChanlRate -= (LARGE_FLOW_PACKET_SIZE * waitingFlow->numPackets);
-
-							waitingFlow->flowAction = PROCESS_PACKET;
-
-							// Add this flow to control channel
-							switchToControllerQueue->append((void *)waitingFlow);
-
-							// Also add copy of this flow to waiting flows
-							waitingFlowsQueue->append((void *)waitingFlow);
-						}
-					} else if (waitingFlow->flowType == small)
-					{
-						if ((controlChanlRate/
-							(SMALL_FLOW_PACKET_SIZE * waitingFlow->numPackets)) < 1)
-						{
-							#ifdef DEBUG
-								printf("Dropping small flow %u\n",waitingFlow->flowNumber);
-							#endif
-							// code to drop the flow
-							numBytesDropped += (waitingFlow->numPackets * 
-												SMALL_FLOW_PACKET_SIZE);
-							delete waitingFlow;
-							waitingFlow = NULL;
-							numFlowsDropped++;
-							numSmallFlowsDropped++;
-						} else
-						{
-							#ifdef DEBUG
-								printf("Flow table is full. Sending packetout\n");
-							#endif
-							// Update control channel rate
-							controlChanlRate -= (SMALL_FLOW_PACKET_SIZE * waitingFlow->numPackets);
-
-							waitingFlow->flowAction = PROCESS_PACKET;
-
-							// Add this flow to control channel
-							switchToControllerQueue->append((void *)waitingFlow);
-
-							// Also add copy of this flow to waiting flows
-							waitingFlowsQueue->append((void *)waitingFlow);
-						}
-					}
+					// Flow dropped
+					waitingFlow = NULL;
 				}
-
+			
 			} else
 			{
-				// handle flow table matching action
-
-				#ifdef DEBUG
-					printf("Flow %u is matching flow table\n",waitingFlow->flowNumber);
-				#endif
-
-				waitingFlow->flowMatching = true;
-
-				// Move the flow to active flows
-				// Note no need to send matching flows to controller
-				activeFlowsQueue->append((void *)waitingFlow);
-
-				// update num bytes to be transferred
-
-				if (waitingFlow->flowType == large)
+			// Handle flow table full case
+				if (!handleFlowTableFull(waitingFlow,&controlChanlRate))
 				{
-					hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
-											( waitingFlow->numPackets * LARGE_FLOW_PACKET_SIZE);
-				} else if (waitingFlow->flowType == small)
-				{
-					hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
-											( waitingFlow->numPackets * SMALL_FLOW_PACKET_SIZE);
-				}											
-			}						
+					// Flow dropped
+					waitingFlow = NULL;
+				}					
+
+			}
+
+		} else
+		{
+			// Handle flow table matching action
+			handleFlowTableMatch(waitingFlow);
+		}						
 	}		
 
 	return 1;
 }
+
+
 
 // Receive the messages from controller and place
 // the flows in proper queue
@@ -424,6 +258,415 @@ unsigned int sdnSwitch::receiveControllerMsgs()
 }
 
 #endif // end of STRAWMAN
+
+
+/*
+Func handleFlowTableFull: Send entire flow to controller or drop the flow 
+Args: 
+waitingFlow -> flow in waitingflow queue
+controlChanlRate -> Current rate of control channel
+Return:
+0 -> If flow is dropped
+1 -> If process_packet is sent to controller
+Algo:
+1. Check if control channel rate is large enough to send process packet message
+2. If check 1 is true, then forward entire flow to controller
+3. If check 1 is false, then drop the flow
+*/
+/*
+unsigned int sdnSwitch::handleFlowTableFull(Flow *waitingFlow, unsigned int *controlChanlRate)
+{
+	// handle flow table full case
+
+	// Send all the packets of this flow to control channel
+	// sending process_packet asynchronous message to controller
+	if (waitingFlow->flowType == large)
+	{
+	 
+		bool evicted = false;
+		
+		#ifdef NOSIX
+
+		// code to evict a small flow
+		unsigned int smallFlowToEvict = findSmallFlowEntry();
+
+					
+		// Found a small flow to evict & Check if control channel has spare BW
+		if (smallFlowToEvict && 
+			((*controlChanlRate/ 
+				(LARGE_FLOW_PACKET_SIZE +
+				((NUM_PACKETS_SMALL_FLOW - 1) * SMALL_FLOW_PACKET_SIZE))) > 1))
+		{
+							
+				// Evict the small flow
+				hashSet.erase(smallFlowToEvict);
+
+				myproperties.numFlowEntriesBySmall--;
+
+				evicted = true;
+
+				// Install the large flow
+				hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
+											LARGE_FLOW_PACKET_SIZE;
+				
+				myproperties.numFlowEntriesByLarge++;
+
+				// Update control channel rate
+				*controlChanlRate -= ( LARGE_FLOW_PACKET_SIZE +
+							((NUM_PACKETS_SMALL_FLOW - 1) * SMALL_FLOW_PACKET_SIZE));
+
+				
+				// Flow action is set for large flow
+				waitingFlow->flowAction = PACKET_IN;
+
+				// Sent packet_in message to controller
+				switchToControllerQueue->append((void *)waitingFlow);
+
+				// Also send copy of  this flow to waiting flows
+				waitingFlowsQueue->append((void *)waitingFlow);
+
+				#ifdef DEBUG
+					printf("Evicted small flow %u & Sending packetin for large flow %u\n",
+								smallFlowToEvict,waitingFlow->flowNumber);
+				#endif
+
+				return 1;
+		 }
+				
+		#endif // NOSIX
+
+	  if (!evicted)
+	  {
+		  if ((*controlChanlRate/
+				(LARGE_FLOW_PACKET_SIZE * waitingFlow->numPackets)) < 1)
+			{
+				#ifdef DEBUG
+					printf("Dropping large flow %u\n",waitingFlow->flowNumber);
+				#endif
+				// code to drop the flow
+				numBytesDropped += (waitingFlow->numPackets * 
+									LARGE_FLOW_PACKET_SIZE);
+				delete waitingFlow;
+				waitingFlow = NULL;
+				numFlowsDropped++;
+				numLargeFlowsDropped++;
+
+				return 0;
+			} else
+			{
+				#ifdef DEBUG
+					printf("Flow table is full. Sending packetout\n");
+				#endif
+				
+				// Update control channel rate
+				*controlChanlRate -= (LARGE_FLOW_PACKET_SIZE * waitingFlow->numPackets);
+
+				waitingFlow->flowAction = PROCESS_PACKET;
+
+				// Add this flow to control channel
+				switchToControllerQueue->append((void *)waitingFlow);
+
+				// Also add copy of this flow to waiting flows
+				waitingFlowsQueue->append((void *)waitingFlow);
+
+				return 1;
+			}
+	  }
+	} else if (waitingFlow->flowType == small)
+	{
+		if ((*controlChanlRate/
+			(SMALL_FLOW_PACKET_SIZE * waitingFlow->numPackets)) < 1)
+		{
+			#ifdef DEBUG
+				printf("Dropping small flow %u\n",waitingFlow->flowNumber);
+			#endif
+			// code to drop the flow
+			numBytesDropped += (waitingFlow->numPackets * 
+								SMALL_FLOW_PACKET_SIZE);
+			delete waitingFlow;
+			waitingFlow = NULL;
+			numFlowsDropped++;
+			numSmallFlowsDropped++;
+
+			return 0;
+		} else
+		{
+			#ifdef DEBUG
+				printf("Flow table is full. Sending packetout\n");
+			#endif
+			// Update control channel rate
+			*controlChanlRate -= (SMALL_FLOW_PACKET_SIZE * waitingFlow->numPackets);
+
+			waitingFlow->flowAction = PROCESS_PACKET;
+
+			// Add this flow to control channel
+			switchToControllerQueue->append((void *)waitingFlow);
+
+			// Also add copy of this flow to waiting flows
+			waitingFlowsQueue->append((void *)waitingFlow);
+
+			return 1;
+		}
+	}
+
+	return 0; // control should not reach here
+}
+
+*/
+
+unsigned int sdnSwitch::handleFlowTableFull(Flow *waitingFlow, unsigned int *controlChanlRate)
+{
+// handle flow table full case
+
+// Send all the packets of this flow to control channel
+// sending process_packet asynchronous message to controller
+if (waitingFlow->flowType == large)
+{
+	// code to evict a small flow
+
+	if ((*controlChanlRate/
+	(LARGE_FLOW_PACKET_SIZE * waitingFlow->numPackets)) < 1)
+	{
+		#ifdef DEBUG
+		printf("Dropping large flow %u\n",waitingFlow->flowNumber);
+		#endif
+		// code to drop the flow
+		numBytesDropped += (waitingFlow->numPackets *
+		LARGE_FLOW_PACKET_SIZE);
+		delete waitingFlow;
+		waitingFlow = NULL;
+		numFlowsDropped++;
+		numLargeFlowsDropped++;
+
+		return 0;
+	} else
+	{
+		#ifdef DEBUG
+		printf("Flow table is full. Sending packetout\n");
+		#endif
+
+		// Update control channel rate
+		*controlChanlRate -= (LARGE_FLOW_PACKET_SIZE * waitingFlow->numPackets);
+
+		waitingFlow->flowAction = PROCESS_PACKET;
+
+		// Add this flow to control channel
+		switchToControllerQueue->append((void *)waitingFlow);
+
+		// Also add copy of this flow to waiting flows
+		waitingFlowsQueue->append((void *)waitingFlow);
+
+		return 1;
+	}
+} else if (waitingFlow->flowType == small)
+{
+	if ((*controlChanlRate/
+	(SMALL_FLOW_PACKET_SIZE * waitingFlow->numPackets)) < 1)
+	{
+		#ifdef DEBUG
+		printf("Dropping small flow %u\n",waitingFlow->flowNumber);
+		#endif
+		// code to drop the flow
+		numBytesDropped += (waitingFlow->numPackets *
+		SMALL_FLOW_PACKET_SIZE);
+		delete waitingFlow;
+		waitingFlow = NULL;
+		numFlowsDropped++;
+		numSmallFlowsDropped++;
+
+		return 0;
+	} else
+	{
+		#ifdef DEBUG
+		printf("Flow table is full. Sending packetout\n");
+		#endif
+		// Update control channel rate
+		*controlChanlRate -= (SMALL_FLOW_PACKET_SIZE * waitingFlow->numPackets);
+
+		waitingFlow->flowAction = PROCESS_PACKET;
+
+		// Add this flow to control channel
+		switchToControllerQueue->append((void *)waitingFlow);
+
+		// Also add copy of this flow to waiting flows
+		waitingFlowsQueue->append((void *)waitingFlow);
+
+		return 1;
+	}
+}
+	return 0;
+}
+
+/*
+Func installFlow: Install the flow or drop 
+Args: 
+waitingFlow -> flow in waitingflow queue
+controlChanlRate -> Current rate of control channel
+Return:
+0 -> If flow is dropped
+1 -> If flow is installed
+Algo:
+1. Check if control channel rate is large enough to send packet in message
+2. If check 1 is true, then install the flow
+3. If check 1 is false, then drop the flow
+*/
+unsigned int sdnSwitch::installFlow(Flow *waitingFlow,unsigned int *controlChanlRate)
+{
+					
+	// Send first packet of the flow to control channel
+	// sending packet_in asynchronous message to controller
+	if (waitingFlow->flowType == large)
+	{
+		if ((*controlChanlRate/LARGE_FLOW_PACKET_SIZE) < 1)
+		{
+			#ifdef DEBUG
+				printf("Dropping large flow %u\n",waitingFlow->flowNumber);
+			#endif
+			// code to drop the flow
+			numBytesDropped += (waitingFlow->numPackets * 
+								LARGE_FLOW_PACKET_SIZE);
+			delete waitingFlow;
+			waitingFlow = NULL;
+			numFlowsDropped++;
+			numLargeFlowsDropped++;
+
+			return 0;
+		} else
+		{
+			#ifdef DEBUG
+				printf("FT is not full. Sending packetin for large flow %u\n",
+								waitingFlow->flowNumber);
+			#endif
+			
+			// Update control channel rate
+			*controlChanlRate -=LARGE_FLOW_PACKET_SIZE;
+			
+			// Update total number of installed flow entries
+			myproperties.numFlowsInstalled++;
+			myproperties.numFlowEntriesByLarge++;
+
+			#ifdef NOSIX
+			hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
+															LARGE_FLOW_PACKET_SIZE;
+			#endif 
+
+			waitingFlow->flowAction = PACKET_IN;
+
+			// Add this flow to control channel
+			switchToControllerQueue->append((void *)waitingFlow);
+
+			// Also add copy of this flow to waiting flows
+			waitingFlowsQueue->append((void *)waitingFlow);
+
+			return 1;
+		}
+	} else if (waitingFlow->flowType == small)
+	{
+		if ((*controlChanlRate/SMALL_FLOW_PACKET_SIZE) < 1)
+		{
+			#ifdef DEBUG
+				printf("Dropping small flow %u\n",waitingFlow->flowNumber);
+			#endif
+			// code to drop the flow
+			numBytesDropped += (waitingFlow->numPackets * 
+								SMALL_FLOW_PACKET_SIZE);
+			delete waitingFlow;
+			waitingFlow = NULL;
+			numFlowsDropped++;
+			numSmallFlowsDropped++;
+
+			return 0;
+		} else
+		{							
+			#ifdef DEBUG
+				printf("FT is not full. Sending packetin for small flow %u\n",
+							waitingFlow->flowNumber);
+			#endif
+
+			if (firstSmallFlowNum == 0)
+			{
+				firstSmallFlowNum = waitingFlow->flowNumber;
+			} else if (waitingFlow->flowNumber < firstSmallFlowNum)
+			{
+				firstSmallFlowNum = waitingFlow->flowNumber;
+			}
+
+			if (lastSmallFlowNum == 0)
+			{
+				lastSmallFlowNum = waitingFlow->flowNumber;
+			} else if (waitingFlow->flowNumber > lastSmallFlowNum)
+			{
+				lastSmallFlowNum = waitingFlow->flowNumber;
+			}
+			
+			// Update control channel rate
+			*controlChanlRate -=SMALL_FLOW_PACKET_SIZE;
+
+			// Update total number of installed flow entries
+			myproperties.numFlowsInstalled++;
+			myproperties.numFlowEntriesBySmall++;
+
+			#ifdef NOSIX
+			hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
+															SMALL_FLOW_PACKET_SIZE;
+			#endif 
+
+			waitingFlow->flowAction = PACKET_IN;
+
+			// Add this flow to control channel
+			switchToControllerQueue->append((void *)waitingFlow);
+
+			// Also add copy of this flow to waiting flows
+			waitingFlowsQueue->append((void *)waitingFlow);
+
+			return 1;
+		}	
+	}
+
+	return 0; // control should not reach here
+}
+
+
+/*
+Func handleFlowTableMatch: Perform flow table matching action 
+Args: 
+waitingFlow -> flow in waitingflow queue
+Return:
+1 on success
+Algo:
+1. Set the flow a matching flow
+2. Append to active flows
+3. Update hash table with amount of bytes matching
+*/
+unsigned int sdnSwitch::handleFlowTableMatch(Flow *waitingFlow)
+{
+	// handle flow table matching action
+
+	#ifdef DEBUG
+		printf("Flow %u is matching flow table\n",waitingFlow->flowNumber);
+	#endif
+
+	waitingFlow->flowMatching = true;
+
+	// Move the flow to active flows
+	// Note no need to send matching flows to controller
+	activeFlowsQueue->append((void *)waitingFlow);
+
+	// update num bytes to be transferred
+
+	if (waitingFlow->flowType == large)
+	{
+		hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
+								( waitingFlow->numPackets * LARGE_FLOW_PACKET_SIZE);
+	} else if (waitingFlow->flowType == small)
+	{
+		hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
+								( waitingFlow->numPackets * SMALL_FLOW_PACKET_SIZE);
+	}
+	
+	return 1;
+}
+
 
 /*
 Func fastPath: Represents flow entries are matching TCAM -
@@ -632,6 +875,7 @@ unsigned int sdnSwitch::forwardFlows()
 	return 1;
 }
 
+
 #ifdef NOSIX
 
 int sdnSwitch::run3(unsigned int currentTime)
@@ -717,6 +961,7 @@ int sdnSwitch::run3(unsigned int currentTime)
 	return 1;
 }
 
+
 /*
 Func sendControllerMsgs: Examine incoming flow & prepare msgs for controller
 -> Check if the incoming flow is matching or not
@@ -764,105 +1009,12 @@ unsigned int sdnSwitch::sendControllerMsgs()
 				// Check if flow table is full
 				if (myproperties.numFlowsInstalled < myproperties.perTableNumFlowEntries)
 				{
-					
-					// Send first packet of the flow to control channel
-					// sending packet_in asynchronous message to controller
-					if (waitingFlow->flowType == large)
-					{
-						if ((controlChanlRate/LARGE_FLOW_PACKET_SIZE) < 1)
+					if (!installFlow(waitingFlow,&controlChanlRate))
 						{
-							#ifdef DEBUG
-								printf("Dropping large flow %u\n",waitingFlow->flowNumber);
-							#endif
-
-							// code to drop the flow
-							numBytesDropped += (waitingFlow->numPackets * LARGE_FLOW_PACKET_SIZE);
-							delete waitingFlow;
+							// Flow dropped
 							waitingFlow = NULL;
-							numFlowsDropped++;
-							numLargeFlowsDropped++;
-						} else
-						{
-							#ifdef DEBUG
-								printf("FT is not full. Sending packetin for large flow %u\n",
-												waitingFlow->flowNumber);
-							#endif
-							
-							// Update control channel rate
-							controlChanlRate -=LARGE_FLOW_PACKET_SIZE;
-							
-							// Update total number of installed flow entries
-							myproperties.numFlowsInstalled++;
-							myproperties.numFlowEntriesByLarge++;
-
-							hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
-															LARGE_FLOW_PACKET_SIZE;
-
-							waitingFlow->flowAction = PACKET_IN;
-
-							// Send packet_in to controller
-							switchToControllerQueue->append((void *)waitingFlow);
-
-							// also add copy of this flow to waiting flows
-							waitingFlowsQueue->append((void *)waitingFlow);
 						}
-					} else if (waitingFlow->flowType == small)
-					{
-						if ((controlChanlRate/SMALL_FLOW_PACKET_SIZE) < 1)
-						{
-							#ifdef DEBUG
-								printf("Dropping small flow %u\n",waitingFlow->flowNumber);
-							#endif
-							// code to drop the flow
-							numBytesDropped += (waitingFlow->numPackets * SMALL_FLOW_PACKET_SIZE);
-							delete waitingFlow;
-							waitingFlow = NULL;
-							numFlowsDropped++;
-							numSmallFlowsDropped++;
-						} else
-						{							
-							#ifdef DEBUG
-								printf("FT is not full. Sending packetin for small flow %u\n",
-											waitingFlow->flowNumber);
-							#endif
-							
-							// To find the flow number of first small flow &
-							// most recent small flow
-							if (firstSmallFlowNum == 0)
-							{
-								firstSmallFlowNum = waitingFlow->flowNumber;
-							} else if (waitingFlow->flowNumber < firstSmallFlowNum)
-							{
-								firstSmallFlowNum = waitingFlow->flowNumber;
-							}
-
-							if (lastSmallFlowNum == 0)
-							{
-								lastSmallFlowNum = waitingFlow->flowNumber;
-							} else if (waitingFlow->flowNumber > lastSmallFlowNum)
-							{
-								lastSmallFlowNum = waitingFlow->flowNumber;
-							}
-							
-							// Update control channel rate
-							controlChanlRate -=SMALL_FLOW_PACKET_SIZE;
-
-							// Update total number of installed flow entries
-							myproperties.numFlowsInstalled++;
-							myproperties.numFlowEntriesBySmall++;
-
-							hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
-															SMALL_FLOW_PACKET_SIZE;
-
-							waitingFlow->flowAction = PACKET_IN;
-
-							// Send packet_in messgae to controller
-							switchToControllerQueue->append((void *)waitingFlow);
-
-							// Also add copy of this flow to waiting flows
-							waitingFlowsQueue->append((void *)waitingFlow);
-						}	
-					}
+					
 				} else
 				{
 					// handle flow table full case
@@ -983,28 +1135,9 @@ unsigned int sdnSwitch::sendControllerMsgs()
 
 			} else
 			{
-				// handle flow table matching action
-
-				#ifdef DEBUG
-					printf("Flow %u is matching flow table\n",waitingFlow->flowNumber);
-				#endif
-
-				waitingFlow->flowMatching = true;
-
-				// Move the flow to active flows
-				activeFlowsQueue->append((void *)waitingFlow);
-
-				// update num bytes to be transferred
-
-				if (waitingFlow->flowType == large)
-				{
-					hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
-											( waitingFlow->numPackets * LARGE_FLOW_PACKET_SIZE);
-				} else if (waitingFlow->flowType == small)
-				{
-					hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
-											( waitingFlow->numPackets * SMALL_FLOW_PACKET_SIZE);
-				}											
+				// Handle flow table matching action
+				handleFlowTableMatch(waitingFlow);
+															
 			}							
 	}		
 

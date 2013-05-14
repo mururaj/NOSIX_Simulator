@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include "generic_queue.h"
+#include "flowGenerator.h"
 
 #define SWITCHPROCESSTIME 1
 #define NUMBYTESPERMB 1048576
@@ -91,6 +92,12 @@ class sdnSwitch
 	unsigned int forwardFlows();
 
 	unsigned int sendControllerMsgs();
+
+	unsigned int installFlow(Flow *waitingFlow,unsigned int *controlChanlRate);
+
+	unsigned int handleFlowTableFull(Flow *waitingFlow,unsigned int *controlChanlRate);
+
+	unsigned int handleFlowTableMatch(Flow *waitingFlow);
 
 	~sdnSwitch()
 	{
