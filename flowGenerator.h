@@ -16,7 +16,7 @@
 
 #define NUMBYTESPERGB 1073741824
 
-#define TOTALNUMFLOWS 5000
+#define TOTALNUMFLOWS 40000
 
 #include "generic_queue.h"
 #include "event_queue.h"
@@ -71,6 +71,15 @@ class flowGenerator
 			myproperties.numLargeFlowsGenerated = 0; //explicity initialized
 			numFlowsGenerated = 0; //total num of flows generated so far
 			
+			// Verifying total number of flows limit
+			if (myproperties.totalNumberOfFlows > TOTALNUMFLOWS)
+			{
+				printf("Error: Flow Gen supports max %d flows\n",TOTALNUMFLOWS);
+				printf("Error: Exceeded max flow limit. Exiting \n");
+				exit(1);
+			}
+
+
 			numSmallFlows = myproperties.totalNumberOfFlows *
 											myproperties.smallFlowPercentage / 100;
 			numLargeFlows = myproperties.totalNumberOfFlows * 
@@ -95,6 +104,7 @@ class flowGenerator
 			   perLargeFlowShare = getfwdRateInBytes()/myproperties.totalNumberOfFlows;
 			}
 			
+
 			// Initialize flow tracker array
 			for (unsigned int i=0;i<TOTALNUMFLOWS;i++)
 			{

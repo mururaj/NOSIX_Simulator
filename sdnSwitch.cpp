@@ -6,17 +6,17 @@
 #include <iostream>
 using namespace std::tr1;
 
-unordered_map <unsigned int,unsigned int> hashSet;
+unordered_map <unsigned int,unsigned int> hashSet[MAXNUMTABLES];
 
 unsigned int firstSmallFlowNum = 0;
 unsigned int lastSmallFlowNum = 0;
 
 //#define DEBUG
-//#define STRAWMAN
-#define NOSIX
+#define STRAWMAN
+//#define NOSIX
 
 #ifdef STRAWMAN
-int sdnSwitch::run3(unsigned int currentTime)
+int sdnSwitch::scenario1Run(unsigned int currentTime)
 {
 	bool processedFlows = false;
 		
@@ -116,19 +116,19 @@ unsigned int sdnSwitch::sendControllerMsgs()
 	while ((waitingFlow = (Flow *) tmpIncomingFlowQueue->remove()))
 	{
 		/* Pre declaring now. Stub to check execution without controller
-		if (!hashSet[waitingFlow->flowNumber])
+		if (!hashSet[0][waitingFlow->flowNumber])
 		{
-			hashSet[waitingFlow->flowNumber] = 1;
-			myproperties.numFlowsInstalled++;
+			hashSet[0][waitingFlow->flowNumber] = 1;
+			myproperties.numFlowsInstalled[0]++;
 
 			#ifdef DEBUG
-				printf("Number of installed flows %u\n",myproperties.numFlowsInstalled);
+				printf("Number of installed flows %u\n",myproperties.numFlowsInstalled[0]);
 			#endif
 
 		}	*/
 
 		// Check if this flow matches flow table entry
-		if (!hashSet[waitingFlow->flowNumber] || waitingFlow->flowTag == begin 
+		if (!hashSet[0][waitingFlow->flowNumber] || waitingFlow->flowTag == begin 
 			|| waitingFlow->flowTag == fullflow)
 		{  
 			// handle flow table missing action
@@ -138,7 +138,7 @@ unsigned int sdnSwitch::sendControllerMsgs()
 			#endif
 
 			// Check if flow table is full
-			if (myproperties.numFlowsInstalled < myproperties.perTableNumFlowEntries)
+			if (myproperties.numFlowsInstalled[0] < myproperties.perTableNumFlowEntries[0])
 			{
 				if (!installFlow(waitingFlow,&controlChanlRate))
 				{
@@ -204,7 +204,7 @@ unsigned int sdnSwitch::receiveControllerMsgs()
 		// Interpret the controller messages
 		if (msgFromController->flowAction == FLOW_INSTALL)
 			{
-				if (hashSet[activeFlow->flowNumber])
+				if (hashSet[0][activeFlow->flowNumber])
 				{ 
 					printf("Error this flow %u is already installed in flow table\n",
 						activeFlow->flowNumber);
@@ -214,17 +214,17 @@ unsigned int sdnSwitch::receiveControllerMsgs()
 				// Install the flow 
 				if (activeFlow->flowType == large)
 				{
-					hashSet[activeFlow->flowNumber] = activeFlow->numPackets * 
+					hashSet[0][activeFlow->flowNumber] = activeFlow->numPackets * 
 															LARGE_FLOW_PACKET_SIZE;
 				} else if (activeFlow->flowType == small)
 				{
 					// Install flow table entry
-					hashSet[activeFlow->flowNumber] = activeFlow->numPackets * 
+					hashSet[0][activeFlow->flowNumber] = activeFlow->numPackets * 
 															SMALL_FLOW_PACKET_SIZE;		
 				}
 
 					#ifdef DEBUG
-						printf("Number of installed flows %u\n",myproperties.numFlowsInstalled);
+						printf("Number of installed flows %u\n",myproperties.numFlowsInstalled[0]);
 					#endif
 
 				// This flow is now a matching flow
@@ -299,17 +299,17 @@ unsigned int sdnSwitch::handleFlowTableFull(Flow *waitingFlow, unsigned int *con
 		{
 							
 				// Evict the small flow
-				hashSet.erase(smallFlowToEvict);
+				hashSet[0].erase(smallFlowToEvict);
 
-				myproperties.numFlowEntriesBySmall--;
+				myproperties.numFlowEntriesBySmall[0]--;
 
 				evicted = true;
 
 				// Install the large flow
-				hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
+				hashSet[0][waitingFlow->flowNumber] = waitingFlow->numPackets * 
 											LARGE_FLOW_PACKET_SIZE;
 				
-				myproperties.numFlowEntriesByLarge++;
+				myproperties.numFlowEntriesByLarge[0]++;
 
 				// Update control channel rate
 				*controlChanlRate -= ( LARGE_FLOW_PACKET_SIZE +
@@ -520,7 +520,7 @@ unsigned int sdnSwitch::installFlow(Flow *waitingFlow,unsigned int *controlChanl
 		if ((*controlChanlRate/LARGE_FLOW_PACKET_SIZE) < 1)
 		{
 			#ifdef DEBUG
-				printf("Dropping large flow %u\n",waitingFlow->flowNumber);
+				printf("FT is not full. Contrl chanl is full.Dropping large flow %u\n",waitingFlow->flowNumber);
 			#endif
 			// code to drop the flow
 			numBytesDropped += (waitingFlow->numPackets * 
@@ -542,11 +542,11 @@ unsigned int sdnSwitch::installFlow(Flow *waitingFlow,unsigned int *controlChanl
 			*controlChanlRate -=LARGE_FLOW_PACKET_SIZE;
 			
 			// Update total number of installed flow entries
-			myproperties.numFlowsInstalled++;
-			myproperties.numFlowEntriesByLarge++;
+			myproperties.numFlowsInstalled[0]++;
+			myproperties.numFlowEntriesByLarge[0]++;
 
 			#ifdef NOSIX
-			hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
+			hashSet[0][waitingFlow->flowNumber] = waitingFlow->numPackets * 
 															LARGE_FLOW_PACKET_SIZE;
 			#endif 
 
@@ -565,7 +565,7 @@ unsigned int sdnSwitch::installFlow(Flow *waitingFlow,unsigned int *controlChanl
 		if ((*controlChanlRate/SMALL_FLOW_PACKET_SIZE) < 1)
 		{
 			#ifdef DEBUG
-				printf("Dropping small flow %u\n",waitingFlow->flowNumber);
+				printf("FT is not full. Contrl chanl is full. Dropping small flow %u\n",waitingFlow->flowNumber);
 			#endif
 			// code to drop the flow
 			numBytesDropped += (waitingFlow->numPackets * 
@@ -603,11 +603,11 @@ unsigned int sdnSwitch::installFlow(Flow *waitingFlow,unsigned int *controlChanl
 			*controlChanlRate -=SMALL_FLOW_PACKET_SIZE;
 
 			// Update total number of installed flow entries
-			myproperties.numFlowsInstalled++;
-			myproperties.numFlowEntriesBySmall++;
+			myproperties.numFlowsInstalled[0]++;
+			myproperties.numFlowEntriesBySmall[0]++;
 
 			#ifdef NOSIX
-			hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
+			hashSet[0][waitingFlow->flowNumber] = waitingFlow->numPackets * 
 															SMALL_FLOW_PACKET_SIZE;
 			#endif 
 
@@ -656,11 +656,11 @@ unsigned int sdnSwitch::handleFlowTableMatch(Flow *waitingFlow)
 
 	if (waitingFlow->flowType == large)
 	{
-		hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
+		hashSet[0][waitingFlow->flowNumber] = hashSet[0][waitingFlow->flowNumber] +
 								( waitingFlow->numPackets * LARGE_FLOW_PACKET_SIZE);
 	} else if (waitingFlow->flowType == small)
 	{
-		hashSet[waitingFlow->flowNumber] = hashSet[waitingFlow->flowNumber] +
+		hashSet[0][waitingFlow->flowNumber] = hashSet[0][waitingFlow->flowNumber] +
 								( waitingFlow->numPackets * SMALL_FLOW_PACKET_SIZE);
 	}
 	
@@ -692,9 +692,9 @@ void sdnSwitch::getDataPlaneStatistics()
 	printf("Number of flows dropped %u\n",numFlowsDropped);
 	printf("Number of small flows dropped %u \n",numSmallFlowsDropped);
 	printf("Number of large flows dropped %u \n",numLargeFlowsDropped);
-	printf("Number of flows installed %u\n",myproperties.numFlowsInstalled);
-	printf("Number of flow table entries filled by small flows %u\n",myproperties.numFlowEntriesBySmall);
-	printf("Number of flow table entries filled by large flows %u\n",myproperties.numFlowEntriesByLarge);
+	printf("Number of flows installed %u\n",myproperties.numFlowsInstalled[0]);
+	printf("Number of flow table entries filled by small flows %u\n",myproperties.numFlowEntriesBySmall[0]);
+	printf("Number of flow table entries filled by large flows %u\n",myproperties.numFlowEntriesByLarge[0]);
 }
 
 
@@ -721,7 +721,7 @@ unsigned int sdnSwitch::findSmallFlowEntry()
 	}
 	for (unsigned int i=firstSmallFlowNum;i<=lastSmallFlowNum;i++)
 	{
-		if (hashSet[i])
+		if (hashSet[0][i])
 		{
 			return i;
 		}
@@ -821,22 +821,22 @@ unsigned int sdnSwitch::forwardFlows()
 			// Uninstall this flow from flow table if this is last piece of the flow
 			if (activeFlow->flowTag == fullflow || activeFlow->flowTag == end)
 			{
-				hashSet.erase(activeFlow->flowNumber);
-				myproperties.numFlowsInstalled--;
+				hashSet[0].erase(activeFlow->flowNumber);
+				myproperties.numFlowsInstalled[0]--;
 
 				if (activeFlow->flowType == small && 
-					myproperties.numFlowEntriesBySmall != 0)
+					myproperties.numFlowEntriesBySmall[0] != 0)
 				{
-					myproperties.numFlowEntriesBySmall--;
+					myproperties.numFlowEntriesBySmall[0]--;
 				} else if (activeFlow->flowType == large &&
-					myproperties.numFlowEntriesByLarge != 0)
+					myproperties.numFlowEntriesByLarge[0] != 0)
 				{
-					myproperties.numFlowEntriesByLarge--;
+					myproperties.numFlowEntriesByLarge[0]--;
 				}
 
 				#ifdef DEBUG
 					printf("Uninstalled active flow %u\n",activeFlow->flowNumber);
-					printf("Number of installed flows %u\n",myproperties.numFlowsInstalled);
+					printf("Number of installed flows %u\n",myproperties.numFlowsInstalled[0]);
 				#endif
 			}		
 				
@@ -878,7 +878,7 @@ unsigned int sdnSwitch::forwardFlows()
 
 #ifdef NOSIX
 
-int sdnSwitch::run3(unsigned int currentTime)
+int sdnSwitch::scenario1Run(unsigned int currentTime)
 {
 	bool processedFlows = false;
 	
@@ -961,6 +961,98 @@ int sdnSwitch::run3(unsigned int currentTime)
 	return 1;
 }
 
+// This is no different from scenario1Run
+// Second phase of the pipeline is proactive L3 routing. Thus we
+// assume that all the flows match this proactive L3 routing entry.
+// Hence the performance of 2nd scenario totally depends on first phase
+// of the pipeline which is combination of L2 rewrite (proactive) & 
+// L2 admission control (reactive)
+int sdnSwitch::scenario2Run(unsigned int currentTime)
+{
+	bool processedFlows = false;
+	
+	
+	numBytesForwarded = 0;
+	numBytesDropped = 0;
+	numFlowsForwarded = 0;
+	numLargeFlowsForwarded = 0;
+	numSmallFlowsForwarded = 0;
+	numPktsForwarded = 0; 
+	numFlowsDropped = 0;
+	numSmallFlowsDropped = 0;
+	numLargeFlowsDropped = 0;
+	firstSmallFlowNum = 0;
+	lastSmallFlowNum = 0;
+	
+	#ifdef DEBUG
+	flowArrivalQueue->getQueueStatistics();
+	#endif
+	
+	if (!receiveIncomingFlows())
+	{
+		printf("There are no flows to receive\n");
+	} else
+	{
+		#ifdef DEBUG
+			printf("Flows are received \n");
+		#endif
+	}
+
+	if (!receiveControllerMsgs())
+	{
+		#ifdef DEBUG
+			printf("No message to process from controller\n");
+		#endif
+		
+	} else
+	{
+		processedFlows = true;
+	}
+
+	if (!forwardFlows())
+	{
+		#ifdef DEBUG
+			printf("No message to forward\n");
+		#endif
+		
+	} else
+	{
+		processedFlows = true;
+	}
+	
+	// No need for explicit coding for phase2
+	// We assume proactive routing always matches
+	// Communication with controller is based on phase1
+	if (!sendControllerMsgs())
+	{
+		#ifdef DEBUG
+			printf("Unable to send messages to controller\n");
+		#endif
+	} 
+
+
+	printf("Time %u: Processing a flow\n",currentTime);
+	getDataPlaneStatistics();
+	
+	// Schedule next processing event
+	Event *newflowProcessingEvent = new Event();
+	newflowProcessingEvent->eventType = switchProcessingEvent;
+	if (!processedFlows)
+	{
+		#ifdef DEBUG
+			printf("Time %u: No flow processed\n",currentTime);
+		#endif
+		newflowProcessingEvent->eventTime = ++currentTime;
+
+	} else
+	{
+		newflowProcessingEvent->eventTime = currentTime + SWITCHPROCESSTIME;
+	}
+	eventScheduler->append((void *) newflowProcessingEvent);
+
+	return 1;
+}
+
 
 /*
 Func sendControllerMsgs: Examine incoming flow & prepare msgs for controller
@@ -980,24 +1072,24 @@ unsigned int sdnSwitch::sendControllerMsgs()
 	while ((waitingFlow = (Flow *) tmpIncomingFlowQueue->remove()))
 	{
 			/* Pre declaring now. Stub to check execution without controller
-			if (!hashSet[waitingFlow->flowNumber])
+			if (!hashSet[0][waitingFlow->flowNumber])
 			{
-				hashSet[waitingFlow->flowNumber] = 1;
-				myproperties.numFlowsInstalled++;
+				hashSet[0][waitingFlow->flowNumber] = 1;
+				myproperties.numFlowsInstalled[0]++;
 
 				#ifdef DEBUG
-					printf("Number of installed flows %u\n",myproperties.numFlowsInstalled);
+					printf("Number of installed flows %u\n",myproperties.numFlowsInstalled[0]);
 				#endif
 
 			}*/		
 
 			// Check if this flow matches flow table entry
-			if (!hashSet[waitingFlow->flowNumber] || waitingFlow->flowTag == begin 
+			if (!hashSet[0][waitingFlow->flowNumber] || waitingFlow->flowTag == begin 
 				|| waitingFlow->flowTag == fullflow)
 			{  
 				// handle flow table missing action
 				
-				if (hashSet[waitingFlow->flowNumber])
+				if (hashSet[0][waitingFlow->flowNumber])
 				{
 					printf("Error -> begin/full flow already in table \n");
 				}
@@ -1007,7 +1099,7 @@ unsigned int sdnSwitch::sendControllerMsgs()
 				#endif
 
 				// Check if flow table is full
-				if (myproperties.numFlowsInstalled < myproperties.perTableNumFlowEntries)
+				if (myproperties.numFlowsInstalled[0] < myproperties.perTableNumFlowEntries[0])
 				{
 					if (!installFlow(waitingFlow,&controlChanlRate))
 						{
@@ -1036,17 +1128,17 @@ unsigned int sdnSwitch::sendControllerMsgs()
 						{
 											
 								// Evict the small flow
-								hashSet.erase(smallFlowToEvict);
+								hashSet[0].erase(smallFlowToEvict);
 
-								myproperties.numFlowEntriesBySmall--;
+								myproperties.numFlowEntriesBySmall[0]--;
 
 								evicted = true;
 
 								// Install the large flow
-								hashSet[waitingFlow->flowNumber] = waitingFlow->numPackets * 
+								hashSet[0][waitingFlow->flowNumber] = waitingFlow->numPackets * 
 															LARGE_FLOW_PACKET_SIZE;
 								
-								myproperties.numFlowEntriesByLarge++;
+								myproperties.numFlowEntriesByLarge[0]++;
 
 								// Update control channel rate
 								controlChanlRate -= ( LARGE_FLOW_PACKET_SIZE +
@@ -1182,7 +1274,7 @@ unsigned int sdnSwitch::receiveControllerMsgs()
 				bool evictedCheck = false;
 
 				// Check if the flow was evicted & to be treated as packet_out
-					if (!hashSet[activeFlow->flowNumber] &&
+					if (!hashSet[0][activeFlow->flowNumber] &&
 						activeFlow->flowType == small)
 					{
 						#ifdef DEBUG
@@ -1206,14 +1298,14 @@ unsigned int sdnSwitch::receiveControllerMsgs()
 				if (!evictedCheck)
 				{
 					// If flow not already installed, then error
-					if (!hashSet[activeFlow->flowNumber])
+					if (!hashSet[0][activeFlow->flowNumber])
 					{ 
 						printf("Error this flow %u is not yet installed in flow table\n",
 						activeFlow->flowNumber);					
 					}
 				
 					#ifdef DEBUG
-						printf("Number of installed flows %u\n",myproperties.numFlowsInstalled);
+						printf("Number of installed flows %u\n",myproperties.numFlowsInstalled[0]);
 					#endif
 
 				// This flow is now a matching flow

@@ -77,11 +77,12 @@ int main()
 	flowGen1Properties.smallFlowPercentage = 80;
 	flowGen1Properties.mediumFlowPercentage = 0;
 	flowGen1Properties.flowArrivalInterval = 1;
-	flowGen1Properties.totalNumberOfFlows = 3500;
+	flowGen1Properties.totalNumberOfFlows = 31000;
 	
 	SwitchProps switch1properties;
 
-	// Initialize the properties of the switch
+	// Initialize the properties of the switch - NOSIX Vs STRAWMAN
+	/*
 	switch1properties.switchModel = 1;
 	switch1properties.forwardingRate = 1; //1Gbps
 	switch1properties.numFlowTables = 1; // only 1 flow table
@@ -90,6 +91,22 @@ int main()
 	switch1properties.numFlowsInstalled = 0; // Initially no flow pre installed
 	switch1properties.numFlowEntriesBySmall = 0; // Initially no small flow pre installed
 	switch1properties.numFlowEntriesByLarge = 0; // Initially no large flow pre installed
+	*/
+
+	// Initialize the properties of the switch - NOSIX Vs NAIVE
+	
+	switch1properties.switchModel = 1;
+	switch1properties.forwardingRate = 1; //1Gbps
+	switch1properties.numFlowTables = 2; // two flow tables
+	switch1properties.perTableNumFlowEntries[0] = 2000;
+	switch1properties.perTableNumFlowEntries[1] = 2000; 
+	switch1properties.ctrlChannelRate = 10; //10Mbps
+	switch1properties.numFlowsInstalled[0] = 0; // Initially no flow pre installed
+	switch1properties.numFlowsInstalled[1] = 0; // Initially no flow pre installed
+	switch1properties.numFlowEntriesBySmall[0] = 0; // Initially no small flow pre installed
+	switch1properties.numFlowEntriesBySmall[1] = 0; // Initially no small flow pre installed
+	switch1properties.numFlowEntriesByLarge[0] = 0; // Initially no large flow pre installed
+	switch1properties.numFlowEntriesByLarge[1] = 0; // Initially no large flow pre installed
 
 	ControllerProps controller1properties;
 
@@ -149,7 +166,7 @@ int main()
 				break;
 			case switchProcessingEvent:
 				printf("Processing switchingevent\n");
-				sw1.run3(currentEvent->eventTime);
+				sw1.scenario1Run(currentEvent->eventTime);
 				break;
 			case controllerProcessingEvent:
 				printf("Processing controllerevent\n");

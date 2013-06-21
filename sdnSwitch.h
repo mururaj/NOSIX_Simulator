@@ -11,6 +11,9 @@
 #define WAITFLOWQUEUEMAXSIZE 105000
 // conservatively declaring max size to hold all small flows
 #define ACTIVEFLOWQUEUEMAXSIZE 105000
+// Maximum number of tables in pipeline
+#define MAXNUMTABLES 2
+
 
 // Need to replace with queue names
 #define TMPQUEUE 5
@@ -28,10 +31,10 @@ typedef struct switchProps
 	unsigned int forwardingRate;   // Forwarding rate in Gbps
 	unsigned int ctrlChannelRate;  // control channel rate
 	unsigned int numFlowTables;    // Number of flow tables
-	unsigned int perTableNumFlowEntries; // Number of flow entries per table
-	unsigned int numFlowsInstalled; // Number of flow entries installed at present
-	unsigned int numFlowEntriesBySmall; // Number of flow table entries occupied by small flows
-	unsigned int numFlowEntriesByLarge; // Number of flow table entries occupued by large flows
+	unsigned int perTableNumFlowEntries[MAXNUMTABLES]; // Number of flow entries per table
+	unsigned int numFlowsInstalled[MAXNUMTABLES]; // Number of flow entries installed at present
+	unsigned int numFlowEntriesBySmall[MAXNUMTABLES]; // Number of flow table entries occupied by small flows
+	unsigned int numFlowEntriesByLarge[MAXNUMTABLES]; // Number of flow table entries occupued by large flows
 }SwitchProps;
 
 
@@ -73,7 +76,9 @@ class sdnSwitch
 	
 	int run(unsigned int currentTime);
 
-	int run3(unsigned int currentTime);
+	int scenario1Run(unsigned int currentTime);
+
+	int scenario2Run(unsigned int currentTime);
 
 	void fastPath(unsigned int flowSize);
 
